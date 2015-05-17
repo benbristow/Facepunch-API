@@ -71,8 +71,13 @@ get '/v1/user/:uid' do |uid|
   content_type :json
   html = parse_html_from_url("/member.php?u=#{uid}")
 
+  #Check user exists
+  if(html.css('.standard_error').length > 0)
+    return render_error("User does not exist")
+  end
+
   #General info
-  name = html.css('span#userinfo')[0].text.strip
+  name = html.css('span#userinfo > span')[0].text.strip
   title = html.css('.usertitle').text
   avatar = "#{ENDPOINT}/" + html.css('img#user_avatar').attr('src')
 
@@ -110,4 +115,8 @@ def extract_background_image(node)
   rescue
     nil
   end
+end
+
+def render_error(message)
+  {:success => false, :error => message}.to_json
 end
