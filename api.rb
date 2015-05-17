@@ -17,6 +17,9 @@ require 'sanitize'
 
 set :server, 'webrick'
 
+#Forbidden error fix?
+set :protection, :except => :json_csrf
+
 #Configure CORS for all routes
 configure do
   enable :cross_origin
