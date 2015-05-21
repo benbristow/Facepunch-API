@@ -33,6 +33,7 @@ get '/', '/v1' do
   { :status => [:online => true, :date => DateTime.now]}.to_json
 end
 
+#Get list of Forums
 get '/v1/forums' do
   content_type :json
 
@@ -70,6 +71,59 @@ get '/v1/forums' do
   { :data => forums }.to_json
 end
 
+#Get Threads in Forum
+get '/v1/forums/:fid' do |fid|
+  content_type :json
+
+  #Page parameter
+  page = "1"
+  if(params[:page])
+    page = params[:page].to_i
+  end
+
+  html = parse_html_from_url("/forumdisplay.php?f=#{fid}&page=#{page}&order=desc")
+
+  threads = []
+  html.css('tr.threadbit').each do |tb|
+    id = tb.attr('id')[/\d+/].to_i
+    title = tb.css('h3.threadtitle > a').text.strip
+    replies = tb.css('td.threadreplies > a').text.to_i
+    views = tb.css('td.threadviews > span').text.to_i
+    viewers = tb.css('div.threadmeta > div.author > span.viewers').text[/\d+/].to_i
+    is_sticky = tb.classes.include?('sticky')
+    icon = "#{ENDPOINT}/" + tb.css('td.threadicon > img').attr('src')
+    icon.sub!('com//', 'com/')
+
+    #Ratings
+    ratings = []
+    tb.css('div.threadratings > span').each do |r|
+      rating_icon = r.css('img').attr('src')
+      rating_name = r.css('img').attr('alt')
+      rating_count = r.css('strong')[0].text.to_i
+      ratings << {:name => rating_name, :icon => rating_icon, :count => rating_count}
+    end
+
+    #OP
+    op_name = tb.css('div.threadmeta > div.author > a').text.strip
+    op_id = tb.css('div.threadmeta > div.author > a')[0].attr('href')[/\d+/].to_i
+    op = {:id => op_id, :name => op_name}
+
+    #Last Poster
+    lastpost_date = tb.css('td.threadlastpost > dl > dd')[0].text
+    lastpost_user_name = tb.css('td.threadlastpost a')[0].text.strip
+    lastpost_user_id = tb.css('td.threadlastpost a')[0].attr('href')[/\d+/].to_i
+    last_post = {:date => lastpost_date, :user => {:id => lastpost_user_id, :name => lastpost_user_name}}
+
+    threads << {
+      :id => id, :title => title, :is_sticky => is_sticky, :icon => icon,
+      :replies => replies, :views => views, :viewers => viewers, :ratings => ratings, :op => op, :last_post => last_post
+    }
+  end
+
+  { :data => threads }.to_json
+end
+
+#Get User Info
 get '/v1/user/:uid' do |uid|
   content_type :json
   html = parse_html_from_url("/member.php?u=#{uid}")
@@ -108,10 +162,14 @@ get '/v1/user/:uid' do |uid|
   ]}.to_json
 end
 
+private
+
+#Parse HTML from URL with Nokogiri and return Nokogiri object
 def parse_html_from_url(path)
   Nokogiri::HTML(open("#{ENDPOINT}#{path}"))
 end
 
+#Extract background image from inline styles.
 def extract_background_image(node)
   begin
     ENDPOINT + node.styles['background-image'][/url\((.+)\)/, 1].gsub("'", '').strip
@@ -120,6 +178,7 @@ def extract_background_image(node)
   end
 end
 
+#Render error message
 def render_error(message)
   {:success => false, :error => message}.to_json
 end
