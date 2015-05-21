@@ -132,7 +132,6 @@ get '/v1/user/:uid' do |uid|
   content_type :json
   html = parse_html_from_url("/member.php?u=#{uid}")
 
-  #Check user exists
   if(html.css('.standard_error').length > 0)
     return render_error("User does not exist")
   end
@@ -149,21 +148,18 @@ get '/v1/user/:uid' do |uid|
   end
 
   #About Me
-  about = []
+  about = {}
   html.css('#view-aboutme dl').each do |info|
-    key = info.css('dt').text.strip.gsub(":", "")
+    key = info.css('dt').text.strip.gsub(":", "").downcase.gsub(" ", "_")
     value = info.css('dd').text.strip
-    about << {key => value}
+    about[key] = value
   end
 
-  {:data => [
-    :id => uid.to_i,
-    :name => name,
-    :avatar => avatar,
-    :title => title,
-    :is_gold => is_gold,
-    :about => about
-  ]}.to_json
+  user = {
+    :id => uid.to_i, :name => name, :avatar => avatar, :title => title, :is_gold => is_gold, :about => about
+  }
+
+  {:data => user}.to_json
 end
 
 private
