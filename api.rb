@@ -72,7 +72,7 @@ get '/v1/forums' do
 end
 
 #Get Threads in Forum
-get '/v1/forum/:fid' do |fid|
+get '/v1/forums/:fid' do |fid|
   content_type :json
 
   #Page parameter
