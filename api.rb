@@ -120,7 +120,11 @@ get '/v1/forum/:fid' do |fid|
     }
   end
 
-  { :data => threads }.to_json
+  if(threads.length > 0)
+    { :data => threads }.to_json
+  else
+    return render_error("Invalid forum/Can't get threads from forum")
+  end
 end
 
 #Get User Info
