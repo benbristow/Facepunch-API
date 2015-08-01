@@ -83,6 +83,8 @@ get '/v1/forums/:fid' do |fid|
 
   html = parse_html_from_url("/forumdisplay.php?f=#{fid}&page=#{page}&order=desc")
 
+  forum_title = html.css('title').text
+
   threads = []
   html.css('tr.threadbit').each do |tb|
     id = tb.attr('id')[/\d+/].to_i
@@ -121,14 +123,15 @@ get '/v1/forums/:fid' do |fid|
   end
 
   if(threads.length > 0)
-    { :data => threads }.to_json
+    forum = {:id => fid.to_i, :page => page.to_i, :title => forum_title, :threads => threads }
+    { :data => forum }.to_json
   else
     return render_error("Invalid forum/Can't get threads from forum")
   end
 end
 
 #Get User Info
-get '/v1/user/:uid' do |uid|
+get '/v1/users/:uid' do |uid|
   content_type :json
   html = parse_html_from_url("/member.php?u=#{uid}")
 
@@ -160,6 +163,71 @@ get '/v1/user/:uid' do |uid|
   }
 
   {:data => user}.to_json
+end
+
+# Get thread
+
+get '/v1/threads/:tid' do |tid|
+  content_type :json
+
+  page = "1"
+  if(params.has_key?("page"))
+    page = params["page"]
+  end
+
+  html = parse_html_from_url("/showthread.php?t=#{tid}&page=#{page}")
+
+  #Get meta info
+  thread_title = html.css('title').text
+  thread_id = tid.to_i
+  page = page.to_i
+
+  #Get Posts
+  posts = []
+
+  post_elements = html.css('ol#posts > li')
+
+  post_elements.each do |pelement|
+
+    #Get Poster info
+    poster_name = pelement.css('div.username_container').text.strip
+    poster_id = pelement.css('div.username_container a').first.attr('href')[/\d+/].to_i
+    poster_avatar = "#{ENDPOINT}/" + pelement.css('img.avatar_image').attr('src')
+    poster = {:id => poster_id, :name => poster_name, :avatar => poster_avatar}
+
+    #Get Post Info
+    post_date = pelement.css('span.date').text
+    post_id = pelement.css('span.nodecontrols a').first.attr('name')[/\d+/].to_i
+
+    post_quotes = []
+
+    #Get Body, Strip Out Quotes
+    post_body = pelement.css('blockquote.postcontent').first
+    post_body.css('div.quote').each do |quote|
+      quote.remove
+    end
+    post_body = post_body.inner_html.strip
+
+    #Get Ratings
+    post_ratings = []
+
+    post_rating_elements = pelement.css('span.rating_results > span')
+    post_rating_elements.each do |relement|
+      rating_name = relement.css('img').attr('alt')
+      rating_image = "#{ENDPOINT}/" + relement.css('img').attr('src')
+      rating_count = relement.css('strong').text.to_i
+      rating = {:name => rating_name, :image => rating_image, :count => rating_count}
+      post_ratings << rating
+    end
+
+    post = {:id => post_id, :body => post_body, :date => post_date, :ratings => post_ratings, :poster => poster}
+    posts << post
+  end
+
+
+  thread = {:id => thread_id, :title => thread_title, :page => page, :posts => posts}
+  {:data => thread}.to_json
+
 end
 
 private
