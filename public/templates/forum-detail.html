@@ -1,0 +1,11 @@
+<ion-view view-title="{{forum.title}}">
+  <ion-content>
+    <ion-list>
+      <ion-item ng-repeat="thread in forum.threads" ng-class="{'sticky': thread.is_sticky}"class="item-remove-animate" type="item-text-wrap" ng-href="#/tab/threads/{{thread.id}}?page={{thread.last_page}}">
+        <h2><img ng-src="{{thread.icon}}"/> {{thread.title}}</h2>
+        <p><strong>OP:</strong> {{thread.op.name}} | <strong>Replies:</strong> {{thread.replies}} |
+          <strong>Last Post:</strong> {{thread.last_post.date}} by {{thread.last_post.user.name}} </p>
+      </ion-item>
+    </ion-list>
+  </ion-content>
+</ion-view>

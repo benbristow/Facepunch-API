@@ -1,0 +1,18 @@
+/* Empty. Add your own CSS if you like */
+
+.sticky > a.item-content {
+  background-color:#ffa !important;
+}
+
+.posthead {
+  padding:10px;
+  background: none repeat-x scroll 0 0 #ccc;
+}
+
+.postbit {
+  white-space: normal !important;
+}
+
+.postbit img {
+  max-width:100%;
+}
