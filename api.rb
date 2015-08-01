@@ -97,6 +97,11 @@ get '/v1/forums/:fid' do |fid|
     icon = "#{ENDPOINT}/" + tb.css('td.threadicon > img').attr('src')
     icon.sub!('com//', 'com/')
 
+    last_page = 1
+    if(tb.css('span.threadpagenav > a').length > 0)
+      last_page = tb.css('span.threadpagenav > a').last.text.sub('Last', '').to_i
+    end
+
     #Ratings
     ratings = []
     tb.css('div.threadratings > span').each do |r|
@@ -119,7 +124,7 @@ get '/v1/forums/:fid' do |fid|
 
     threads << {
       :id => id, :title => title, :is_sticky => is_sticky, :icon => icon,
-      :replies => replies, :views => views, :viewers => viewers, :ratings => ratings, :op => op, :last_post => last_post
+      :replies => replies, :views => views, :viewers => viewers, :ratings => ratings, :op => op, :last_post => last_post, :last_page => last_page
     }
   end
 
