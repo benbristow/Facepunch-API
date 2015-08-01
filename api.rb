@@ -3,7 +3,6 @@ require 'sinatra'
 require 'sinatra/cross_origin'
 require "sinatra/multi_route"
 
-#Remember to comment out before deployment!
 require 'sinatra/reloader'
 require 'pry'
 
@@ -12,6 +11,7 @@ require 'nokogiri'
 require 'nokogiri-styles'
 
 require 'open-uri'
+require 'httparty'
 require 'json'
 require 'sanitize'
 
@@ -23,6 +23,7 @@ set :protection, :except => :json_csrf
 #Configure CORS for all routes
 configure do
   enable :cross_origin
+  set :server, 'thin'
 end
 
 ENDPOINT = "http://www.facepunch.com"
@@ -188,40 +189,40 @@ get '/v1/threads/:tid' do |tid|
   post_elements = html.css('ol#posts > li')
 
   post_elements.each do |pelement|
+    begin
+      #Get Poster info
+      poster_name = pelement.css('div.username_container').text.strip
+      poster_id = pelement.css('div.username_container a').first.attr('href')[/\d+/].to_i
+      poster_avatar = "#{ENDPOINT}/" + pelement.css('img.avatar_image').attr('src')
+      poster = {:id => poster_id, :name => poster_name, :avatar => poster_avatar}
 
-    #Get Poster info
-    poster_name = pelement.css('div.username_container').text.strip
-    poster_id = pelement.css('div.username_container a').first.attr('href')[/\d+/].to_i
-    poster_avatar = "#{ENDPOINT}/" + pelement.css('img.avatar_image').attr('src')
-    poster = {:id => poster_id, :name => poster_name, :avatar => poster_avatar}
+      #Get Post Info
+      post_date = pelement.css('span.date').text
+      post_id = pelement.css('span.nodecontrols a').first.attr('name')[/\d+/].to_i
 
-    #Get Post Info
-    post_date = pelement.css('span.date').text
-    post_id = pelement.css('span.nodecontrols a').first.attr('name')[/\d+/].to_i
+      #Get Body, Strip Out Quotes
+      post_body = pelement.css('blockquote.postcontent').first
+      post_body.css('div.quote').each do |quote|
+        quote.remove
+      end
+      post_body = post_body.inner_html.strip
 
-    post_quotes = []
+      #Get Ratings
+      post_ratings = []
 
-    #Get Body, Strip Out Quotes
-    post_body = pelement.css('blockquote.postcontent').first
-    post_body.css('div.quote').each do |quote|
-      quote.remove
+      post_rating_elements = pelement.css('span.rating_results > span')
+      post_rating_elements.each do |relement|
+        rating_name = relement.css('img').attr('alt')
+        rating_image = "#{ENDPOINT}/" + relement.css('img').attr('src')
+        rating_count = relement.css('strong').text.to_i
+        rating = {:name => rating_name, :image => rating_image, :count => rating_count}
+        post_ratings << rating
+      end
+
+      post = {:id => post_id, :body => post_body, :date => post_date, :ratings => post_ratings, :poster => poster}
+      posts << post
+    rescue
     end
-    post_body = post_body.inner_html.strip
-
-    #Get Ratings
-    post_ratings = []
-
-    post_rating_elements = pelement.css('span.rating_results > span')
-    post_rating_elements.each do |relement|
-      rating_name = relement.css('img').attr('alt')
-      rating_image = "#{ENDPOINT}/" + relement.css('img').attr('src')
-      rating_count = relement.css('strong').text.to_i
-      rating = {:name => rating_name, :image => rating_image, :count => rating_count}
-      post_ratings << rating
-    end
-
-    post = {:id => post_id, :body => post_body, :date => post_date, :ratings => post_ratings, :poster => poster}
-    posts << post
   end
 
 
@@ -234,7 +235,8 @@ private
 
 #Parse HTML from URL with Nokogiri and return Nokogiri object
 def parse_html_from_url(path)
-  Nokogiri::HTML(open("#{ENDPOINT}#{path}"))
+  doc = HTTParty.get("#{ENDPOINT}#{path}")
+  Nokogiri::HTML(doc)
 end
 
 #Extract background image from inline styles.

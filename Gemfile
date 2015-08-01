@@ -9,9 +9,12 @@ gem "sinatra-cross_origin"
 gem "nokogiri"
 gem 'nokogiri-styles'
 gem "sanitize"
+gem 'httparty'
 
 #Development only
 group :development do
   gem "sinatra-reloader"
   gem "pry"
 end
+
+gem 'thin'
