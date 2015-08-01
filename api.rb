@@ -78,8 +78,8 @@ get '/v1/forums/:fid' do |fid|
 
   #Page parameter
   page = "1"
-  if(params[:page])
-    page = params[:page].to_i
+  if(params.has_key?("page"))
+    page = params["page"].to_i
   end
 
   html = parse_html_from_url("/forumdisplay.php?f=#{fid}&page=#{page}&order=desc")
